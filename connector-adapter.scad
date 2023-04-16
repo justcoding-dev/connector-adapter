@@ -84,10 +84,10 @@ innerHexRadius2 = 4;
 rotate ([90,0,0]) {
     union() {
         // Create first side
-        side(numLegs1, legLength1, outerRadius1, innerRadius1, legThickness1, legSpacing1, innerHexPos1, innerHexRadius1);
+        side(numLegs1, legLength1, legSupports1, outerRadius1, innerRadius1, legThickness1, legSpacing1, innerHexPos1, innerHexRadius1);
         
         // Create other side, rotate to extend in -x direction
-        rotate ([0,0,180]) side(numLegs2, legLength2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2);
+        rotate ([0,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2);
         
         maxWidth=max(outerRadius1, outerRadius2);
         maxHeight=max(height(numLegs1, legThickness1, legSpacing1), height(numLegs2, legThickness2, legSpacing2));
@@ -99,7 +99,7 @@ rotate ([90,0,0]) {
 
 // Create one side of the adapter with the specified number of legs and spacing
 // The result is aligned with the legs stacked vertically and the base plate centered on the y-axis
-module side(numLegs=2, legLength=0, outer=2, inner=1, thickness=1, space=1, innerHexPos=0, innerHexRadius=0) {
+module side(numLegs=2, legLength=0, legSupports=2, outer=2, inner=1, thickness=1, space=1, innerHexPos=0, innerHexRadius=0) {
     
     // Distance between the outside surfaces of the outermost legs
     totalHeight = height(numLegs, thickness, space);
@@ -114,10 +114,24 @@ module side(numLegs=2, legLength=0, outer=2, inner=1, thickness=1, space=1, inne
                 
                 vOffset=(thickness + space) * (i-1);
                 
-                if (i == innerHexPos) {
-                    translate ([0,0,vOffset - totalHeightOffset]) leg(outer, innerHexRadius, thickness, true, legLength);
-                } else {
-                    translate ([0,0,vOffset - totalHeightOffset]) leg(outer, inner, thickness, false, legLength);
+
+                translate ([0,0,vOffset - totalHeightOffset]) 
+                    union() {
+                        if (i == innerHexPos) {
+                            leg(outer, innerHexRadius, thickness, true, legLength);
+                        } else {
+                            leg(outer, inner, thickness, false, legLength);
+                        }
+                        
+                    }
+            }
+            
+            // Add supports for the legs
+            if (legSupports > 0) {
+                dist = outer * 2;
+                for (l=[0:(legSupports-1)]) {
+                    offset=((legLength - outer) / (legSupports)) * l + 2 * outer;
+                    translate ([offset, 0, 0]) cube([thickness, 2*outer, height(numLegs, thickness, space)], true);
                 }
             }
         }
