@@ -19,13 +19,17 @@
 // Thickness of the plate connecting the parts
 baseThickness = 4;
 
+// Rotation of the two parts
+rotate = false;
+
+
 // Geometry of first side
 
 // Number of legs on side 1
 numLegs1 = 2;
 
 // Outer radius (or half-width) of the legs on side 1
-outerRadius1 = 4.0;
+outerRadius1 = 6.0;
 
 // Radius of the inner whole in the legs on side 1
 innerRadius1 = 1.5;
@@ -34,10 +38,13 @@ innerRadius1 = 1.5;
 legThickness1 = 4.0;
 
 // Length of the leg
-legLength1 = 20;
+legLength1 = 0;
 
 // Distance between the legs on side 1
-legSpacing1 = 10.0;
+legSpacing1 = 4.0;
+
+// Number of supports on the first leg
+legSupports1 = 0;
 
 // Number of leg which should have a hex coutout (0 = none)
 innerHexPos1 = 0;
@@ -47,25 +54,27 @@ innerHexRadius1 = 2;
 
 
 // Geometry of second  side
-// The predefined values fit a GoPro mount.
 
 // Number of legs on side 2
 numLegs2 = 2;
 
 // Outer radius (or half-width) of the legs on side 2
-outerRadius2 = 7.5;
+outerRadius2 = 6;
 
 // Radius of the inner whole in the legs on side 2
 innerRadius2 = 2.65;
 
 // Thickness of each leg on side 2
-legThickness2 = 2.9;
+legThickness2 = 2;
 
 // Length of the leg
 legLength2 = 100;
 
 // Distance between the legs on side 2
-legSpacing2 = 3.3;
+legSpacing2 = 8;
+
+// Number of supports on the first leg
+legSupports2 = 3;
 
 // Number of leg which should have a hex coutout (0 = none) on side 2
 innerHexPos2 = 0;
@@ -86,14 +95,22 @@ rotate ([90,0,0]) {
         // Create first side
         side(numLegs1, legLength1, legSupports1, outerRadius1, innerRadius1, legThickness1, legSpacing1, innerHexPos1, innerHexRadius1);
         
+
         // Create other side, rotate to extend in -x direction
-        rotate ([0,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2);
+        if (rotate == true) {
+            rotate ([90,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2);
+            maxHeight=max(height(numLegs1, legThickness1, legSpacing1), 2 * outerRadius2);
+            maxWidth=max(2 * outerRadius1, height(numLegs2, legThickness2, legSpacing2));
+            // Connecting base plate
+            cube ([baseThickness, maxWidth, maxHeight], true);
+        } else {
+            rotate ([0,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2);
+            maxWidth=max(outerRadius1, outerRadius2);
+            maxHeight=max(height(numLegs1, legThickness1, legSpacing1), height(numLegs2, legThickness2, legSpacing2));
+            // Connecting base plate
+            cube ([baseThickness, 2 *maxWidth, maxHeight], true);
+        }            
         
-        maxWidth=max(outerRadius1, outerRadius2);
-        maxHeight=max(height(numLegs1, legThickness1, legSpacing1), height(numLegs2, legThickness2, legSpacing2));
-        
-        // Connecting base plate
-        cube ([baseThickness, 2 *maxWidth, maxHeight], true);
     }
 }
 
