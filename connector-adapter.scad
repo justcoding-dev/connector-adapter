@@ -46,16 +46,11 @@ legSpacing1 = 3.5;
 // Number of supports on the first leg
 legSupports1 = 0;
 
-// Number of leg which should have a hex coutout (0 = none)
-innerHexPos1 = 1;
+// Inset on the first leg, defined as Radius, Depth, Form (1 = Hex, 0 = Round)
+inset1a = [ 3.1, 1.5, 1];
 
-// Radius of the Hex cutout, usually more than the inner radius
-innerHexRadius1 = 3.1;
-
-// Depth of the inner hexcutout. Use negative values for first leg and positive values for last leg
-innerHexDepth1 = -1.5;
-
-
+// Inset on the last leg, defined as Radius, Depth, Form (1 = Hex, 0 = Round)
+inset1b = [ 3, 1.5, 0];
 
 // Geometry of second  side
 
@@ -80,14 +75,11 @@ legSpacing2 = 3.5;
 // Number of supports on the first leg
 legSupports2 = 0;
 
-// Number of leg which should have a hex coutout (0 = none) on side 2
-innerHexPos2 = 1;
+// Inset on the first leg, defined as Radius, Depth, Form (1 = Hex, 0 = Round)
+inset2a = [ 3.1, 1.5, 1];
 
-// Radius of the Hex cutout on side 2, usually more than the inner radius
-innerHexRadius2 = 3.1;
-
-// Depth of the inner hexcutout. Use negative values for first leg and positive values for last leg
-innerHexDepth2 = -1.5;
+// Inset on the last leg, defined as Radius, Depth, Form (1 = Hex, 0 = Round)
+inset2b = [ 3, 1.5, 0];
 
 /////////////////////////////////////////////////////////////
 // Nothing more to edit here
@@ -99,18 +91,18 @@ innerHexDepth2 = -1.5;
 rotate ([90,0,0]) {
     union() {
         // Create first side
-        side(numLegs1, legLength1, legSupports1, outerRadius1, innerRadius1, legThickness1, legSpacing1, innerHexPos1, innerHexRadius1, innerHexDepth1);
+        side(numLegs1, legLength1, legSupports1, outerRadius1, innerRadius1, legThickness1, legSpacing1, inset1a, inset1b);
         
 
         // Create other side, mirror (by double rotation) to extend in -x direction
         if (rotate == true) {
-            rotate ([90,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2, innerHexDepth2);
+            rotate ([90,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, inset2a, inset2b);
             maxHeight=max(height(numLegs1, legThickness1, legSpacing1), 2 * outerRadius2);
             maxWidth=max(2 * outerRadius1, height(numLegs2, legThickness2, legSpacing2));
             // Connecting base plate
             cube ([baseThickness, maxWidth, maxHeight], true);
         } else {
-            rotate ([0,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, innerHexPos2, innerHexRadius2, innerHexDepth2);
+            rotate ([0,0,180]) side(numLegs2, legLength2, legSupports2, outerRadius2, innerRadius2, legThickness2, legSpacing2, inset2a, inset2b);
             maxWidth=max(outerRadius1, outerRadius2);
             maxHeight=max(height(numLegs1, legThickness1, legSpacing1), height(numLegs2, legThickness2, legSpacing2));
             // Connecting base plate
@@ -122,7 +114,7 @@ rotate ([90,0,0]) {
 
 // Create one side of the adapter with the specified number of legs and spacing
 // The result is aligned with the legs stacked vertically and the base plate centered on the y-axis
-module side(numLegs=2, legLength=0, legSupports=2, outer=2, inner=1, thickness=1, space=1, innerHexPos=0, innerHexRadius=0, innerHexDepth=0) {
+module side(numLegs=2, legLength=0, legSupports=2, outer=2, inner=1, thickness=1, space=1, insetA, insetB) {
     
     // Distance between the outside surfaces of the outermost legs
     totalHeight = height(numLegs, thickness, space);
@@ -140,10 +132,15 @@ module side(numLegs=2, legLength=0, legSupports=2, outer=2, inner=1, thickness=1
 
                     translate ([0,0,vOffset - totalHeightOffset]) 
                         union() {
-                            if (i == innerHexPos) {
-                                leg(outer, inner, thickness, true, innerHexRadius, innerHexDepth, legLength);
+                            if (i == 1) {
+                                // Use insetA for the first leg
+                                leg(outer, inner, thickness, true, [ insetA[0], -insetA[1], insetA[2]], legLength);
+                            } else if (i == numLegs) {
+                                // Use insetB for the second leg
+                                leg(outer, inner, thickness, false, insetB, legLength);
                             } else {
-                                leg(outer, inner, thickness, false, innerHexRadius, innerHexDepth, legLength);
+                                // Dummy inset with depth 0
+                                leg(outer, inner, thickness, false, [ 0, 0, 0 ], legLength);
                             }
                             
                         }
@@ -162,7 +159,7 @@ module side(numLegs=2, legLength=0, legSupports=2, outer=2, inner=1, thickness=1
 // Create one leg, consisting of a circle and a box, with a hole in the circle
 // The leg will be centered on the origin with the circles' center and aligned
 // on the x/y-axis
-module leg(outer=2, inner=1, thickness=1, innerHex=false, hexRadius=0, hexDepth=0, legLength=0) {
+module leg(outer=2, inner=1, thickness=1, innerHex=false, inset, legLength=0) {
        difference() {
             union() {
                 cylinder(thickness,outer,outer,true,$fn=16);
@@ -172,11 +169,32 @@ module leg(outer=2, inner=1, thickness=1, innerHex=false, hexRadius=0, hexDepth=
             union() {
                 cylinder(thickness * 1.1,inner, inner,true,$fn=16);
                 
-                if (innerHex) {
-                    if (hexDepth > 0) {
-                        translate ([0, 0, thickness - hexDepth]) cylinder(thickness * 1.01, hexRadius, hexRadius,true,$fn=6);
+                insetRadius = inset[0];
+                insetDepth = inset[1];
+                insetType = inset[2];
+                
+                
+                if (insetDepth != 0) {
+                    
+                    
+                    if (insetType == 0) {
+                        insetCorners = 6;
                     } else {
-                        translate ([0, 0, - (hexDepth + thickness)]) cylinder(thickness * 1.01, hexRadius, hexRadius,true,$fn=6);
+                        insetCorners = 16;
+                    }
+                    
+                    if (insetDepth > 0) {
+                        if (insetType == 1) {
+                            translate ([0, 0, thickness - insetDepth]) cylinder(thickness * 1.01, insetRadius, insetRadius,true,$fn=6);
+                        } else {
+                            translate ([0, 0, thickness - insetDepth]) cylinder(thickness * 1.01, insetRadius, insetRadius,true,$fn=16);
+                        }
+                    } else {
+                        if (insetType == 1) {
+                            translate ([0, 0, - (insetDepth + thickness)]) cylinder(thickness * 1.01, insetRadius, insetRadius,true,$fn=6);
+                        } else {
+                            translate ([0, 0, - (insetDepth + thickness)]) cylinder(thickness * 1.01, insetRadius, insetRadius,true,$fn=16);
+                        }
                     }
                     
                 }
